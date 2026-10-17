@@ -9,5 +9,12 @@
   "scope": "./",
   "display": "standalone",
   "background_color": "#101827",
-  "theme_color": "#101827"
+  "theme_color": "#101827",
+  "icons": [
+  {
+    "src": "./SmartCalc_AI_icon_512.png",
+    "sizes": "512x512",
+    "type": "image/png"
+  }
+]
 }
