@@ -1,0 +1,13 @@
+
+{
+  "name": "SmartCalc AI",
+  "short_name": "SmartCalc",
+  "description": "A smart calculator for everyday calculations",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#101827",
+  "theme_color": "#101827"
+}

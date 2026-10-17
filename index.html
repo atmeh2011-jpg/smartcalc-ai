@@ -1,0 +1,520 @@
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#101827">
+  <title>SmartCalc AI</title>
+  <link rel="manifest" href="./manifest.json">
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+<script>
+  if ("serviceWorker" in navigator &&
+      location.protocol.startsWith("http")) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("./sw.js")
+        .catch((error) => console.error(
+          "Service worker registration failed:", error
+        ));
+    });
+  }
+</script>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #101827;
+      color: #ffffff;
+      font-family: Arial, sans-serif;
+      padding: 20px 14px;
+    }
+
+    .app {
+      max-width: 420px;
+      margin: 0 auto;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 8px 0 24px;
+    }
+
+    .brand {
+      font-size: 23px;
+      font-weight: bold;
+    }
+
+    .brand span {
+      color: #55e6c1;
+    }
+
+    .tag {
+      font-size: 11px;
+      color: #55e6c1;
+      border: 1px solid #285b56;
+      padding: 6px 9px;
+      border-radius: 20px;
+    }
+
+    .screen {
+      background: #192538;
+      border: 1px solid #29384e;
+      border-radius: 22px;
+      padding: 20px 16px;
+      min-height: 150px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      text-align: left;
+      overflow: hidden;
+      margin-bottom: 17px;
+    }
+
+    .expression {
+      color: #aab8cb;
+      font-size: 20px;
+      min-height: 30px;
+      overflow-wrap: anywhere;
+    }
+
+    .result {
+      font-size: clamp(32px, 9vw, 43px);
+      font-weight: bold;
+      margin-top: 12px;
+      overflow-wrap: anywhere;
+    }
+
+    .status {
+      color: #55e6c1;
+      font-size: 12px;
+      margin-top: 9px;
+    }
+
+    .keys {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    button {
+      border: none;
+      border-radius: 15px;
+      min-height: 61px;
+      font-size: 22px;
+      font-weight: 600;
+      background: #243349;
+      color: #ffffff;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    button:active {
+      transform: scale(.96);
+      filter: brightness(1.2);
+    }
+
+    .utility {
+      background: #34465d;
+      color: #55e6c1;
+    }
+
+    .operator {
+      background: #234e50;
+      color: #65f3cf;
+    }
+
+    .equals {
+      background: #55e6c1;
+      color: #10212a;
+    }
+
+    .zero {
+      grid-column: span 2;
+    }
+
+    .section {
+      margin-top: 24px;
+      background: #192538;
+      border-radius: 18px;
+      padding: 16px;
+    }
+
+    .section h2 {
+      font-size: 16px;
+      margin: 0 0 12px;
+    }
+
+    .ai-note {
+      color: #c2cede;
+      font-size: 14px;
+      line-height: 1.8;
+    }
+
+    .history {
+      color: #c2cede;
+      font-size: 14px;
+      line-height: 1.8;
+      overflow-wrap: anywhere;
+    }
+
+    .history-item {
+      padding: 8px 0;
+      border-bottom: 1px solid #304056;
+    }
+
+    .footer {
+      text-align: center;
+      color: #8190a5;
+      font-size: 12px;
+      margin: 24px 0 8px;
+    }
+  </style>
+</head>
+
+<body>
+  <main class="app">
+    <header>
+      <div class="brand">SmartCalc <span>AI</span></div>
+      <div class="tag">الإصدار الأول 1.0</div>
+    </header>
+
+    <section class="screen" aria-live="polite">
+      <div class="expression" id="expression">0</div>
+      <div class="result" id="result">0</div>
+      <div class="status" id="status">جاهز للحساب</div>
+    </section>
+
+    <section class="keys" aria-label="الآلة الحاسبة">
+      <button class="utility" data-action="clear">AC</button>
+      <button class="utility" data-action="delete">DEL</button>
+      <button class="utility" data-action="percent">%</button>
+      <button class="operator" data-value="÷">÷</button>
+
+      <button data-value="7">7</button>
+      <button data-value="8">8</button>
+      <button data-value="9">9</button>
+      <button class="operator" data-value="×">×</button>
+
+      <button data-value="4">4</button>
+      <button data-value="5">5</button>
+      <button data-value="6">6</button>
+      <button class="operator" data-value="-">−</button>
+
+      <button data-value="1">1</button>
+      <button data-value="2">2</button>
+      <button data-value="3">3</button>
+      <button class="operator" data-value="+">+</button>
+
+      <button class="utility" data-action="sign">+/−</button>
+      <button class="zero" data-value="0">0</button>
+      <button data-value=".">.</button>
+      <button class="equals" data-action="equals">=</button>
+    </section>
+
+    <section class="section">
+      <h2>✨ مساعد SmartCalc AI</h2>
+      <div class="ai-note" id="aiNote">
+        هذه النسخة تعمل محليًا وتنفّذ العمليات الحسابية.
+        المساعد الذكي الحقيقي سنضيفه في مرحلة لاحقة.
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>سجل العمليات</h2>
+      <div class="history" id="history">
+        لا توجد عمليات سابقة.
+      </div>
+      <button class="utility"
+              id="clearHistory"
+              style="width:100%; margin-top:12px; font-size:15px;">
+        مسح السجل
+      </button>
+    </section>
+
+    <div class="footer">
+      SmartCalc AI · صُنع للتعلّم والتطوير
+    </div>
+  </main>
+
+  <script>
+    const expressionEl = document.getElementById("expression");
+    const resultEl = document.getElementById("result");
+    const statusEl = document.getElementById("status");
+    const historyEl = document.getElementById("history");
+    const aiNote = document.getElementById("aiNote");
+
+    let current = "0";
+    let previous = null;
+    let operator = null;
+    let waiting = false;
+    let justCalculated = false;
+    let history = [];
+
+    function render() {
+      expressionEl.textContent = current || "0";
+    }
+
+    function showStatus(message) {
+      statusEl.textContent = message;
+    }
+
+    function formatNumber(number) {
+      if (!Number.isFinite(number)) {
+        return "خطأ";
+      }
+
+      return String(Number(number.toPrecision(12)));
+    }
+
+    function inputNumber(value) {
+      if (current === "خطأ" || justCalculated) {
+        current = value === "." ? "0." : value;
+        previous = null;
+        operator = null;
+        waiting = false;
+        justCalculated = false;
+        resultEl.textContent = "0";
+        showStatus("جاهز للحساب");
+        render();
+        return;
+      }
+
+      if (waiting) {
+        current = value === "." ? "0." : value;
+        waiting = false;
+      } else if (value === ".") {
+        if (!current.includes(".")) {
+          current += ".";
+        }
+      } else {
+        current = current === "0" ? value : current + value;
+      }
+
+      render();
+    }
+
+    function chooseOperator(nextOperator) {
+      if (current === "خطأ") return;
+
+      const inputValue = Number(current);
+
+      if (operator && !waiting) {
+        const result = calculate(previous, inputValue, operator);
+
+        if (result === null) return;
+
+        current = formatNumber(result);
+        resultEl.textContent = current;
+      } else if (!justCalculated || previous === null) {
+        previous = inputValue;
+      }
+
+      operator = nextOperator;
+      previous = Number(current);
+      waiting = true;
+      justCalculated = false;
+
+      const symbols = {
+        "+": "+",
+        "-": "−",
+        "×": "×",
+        "÷": "÷"
+      };
+
+      expressionEl.textContent =
+        current + " " + symbols[operator];
+
+      showStatus("اختر الرقم التالي");
+    }
+
+    function calculate(a, b, op) {
+      if (a === null || !Number.isFinite(a) ||
+          !Number.isFinite(b)) {
+        return null;
+      }
+
+      if (op === "+") return a + b;
+      if (op === "-") return a - b;
+      if (op === "×") return a * b;
+
+      if (op === "÷") {
+        if (b === 0) {
+          current = "خطأ";
+          resultEl.textContent = "لا يمكن القسمة على صفر";
+          showStatus("تحقق من العملية");
+          operator = null;
+          previous = null;
+          waiting = true;
+          justCalculated = false;
+          render();
+          return null;
+        }
+
+        return a / b;
+      }
+
+      return b;
+    }
+
+    function equals() {
+      if (!operator || previous === null || waiting) {
+        return;
+      }
+
+      const a = previous;
+      const b = Number(current);
+      const op = operator;
+      const symbols = {
+        "+": "+",
+        "-": "−",
+        "×": "×",
+        "÷": "÷"
+      };
+
+      const answer = calculate(a, b, op);
+
+      if (answer === null) return;
+
+      const formatted = formatNumber(answer);
+      const line = `${formatNumber(a)} ${symbols[op]} ${formatNumber(b)} = ${formatted}`;
+
+      current = formatted;
+      resultEl.textContent = formatted;
+      expressionEl.textContent = line;
+
+      history.unshift(line);
+      history = history.slice(0, 10);
+      renderHistory();
+
+      previous = null;
+      operator = null;
+      waiting = false;
+      justCalculated = true;
+
+      showStatus("تم الحساب بنجاح");
+      aiNote.textContent =
+        "نتيجة العملية: " + formatted +
+        ". المساعد الذكي المتصل بالذكاء الاصطناعي سيُضاف لاحقًا.";
+    }
+
+    function clearAll() {
+      current = "0";
+      previous = null;
+      operator = null;
+      waiting = false;
+      justCalculated = false;
+      resultEl.textContent = "0";
+      render();
+      showStatus("جاهز للحساب");
+    }
+
+    function deleteLast() {
+      if (justCalculated || current === "خطأ") {
+        clearAll();
+        return;
+      }
+
+      if (waiting) return;
+
+      current = current.length > 1
+        ? current.slice(0, -1)
+        : "0";
+
+      if (current === "-") current = "0";
+
+      render();
+    }
+
+    function changeSign() {
+      if (current === "خطأ") return;
+
+      if (Number(current) !== 0) {
+        current = formatNumber(-Number(current));
+        render();
+      }
+    }
+
+    function percent() {
+      if (current === "خطأ") return;
+
+      current = formatNumber(Number(current) / 100);
+      resultEl.textContent = current;
+      render();
+      showStatus("تم تحويل العدد إلى نسبة مئوية");
+    }
+
+    function renderHistory() {
+      historyEl.replaceChildren();
+
+      if (history.length === 0) {
+        historyEl.textContent = "لا توجد عمليات سابقة.";
+        return;
+      }
+
+      history.forEach((line) => {
+        const item = document.createElement("div");
+        item.className = "history-item";
+        item.textContent = line;
+        historyEl.appendChild(item);
+      });
+    }
+
+    document.querySelector(".keys").addEventListener("click", (event) => {
+      const button = event.target.closest("button");
+      if (!button) return;
+
+      if (button.dataset.value !== undefined) {
+        const value = button.dataset.value;
+
+        if (["+", "-", "×", "÷"].includes(value)) {
+          chooseOperator(value);
+        } else {
+          inputNumber(value);
+        }
+
+        return;
+      }
+
+      const action = button.dataset.action;
+
+      if (action === "clear") clearAll();
+      if (action === "delete") deleteLast();
+      if (action === "percent") percent();
+      if (action === "sign") changeSign();
+      if (action === "equals") equals();
+    });
+
+    document.getElementById("clearHistory").addEventListener("click", () => {
+      history = [];
+      renderHistory();
+      showStatus("تم مسح سجل العمليات");
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (/^[0-9.]$/.test(event.key)) {
+        inputNumber(event.key);
+      } else if (event.key === "+") {
+        chooseOperator("+");
+      } else if (event.key === "-") {
+        chooseOperator("-");
+      } else if (event.key === "*") {
+        chooseOperator("×");
+      } else if (event.key === "/") {
+        event.preventDefault();
+        chooseOperator("÷");
+      } else if (event.key === "Enter" || event.key === "=") {
+        equals();
+      } else if (event.key === "Backspace") {
+        deleteLast();
+      } else if (event.key === "Escape") {
+        clearAll();
+      }
+    });
+  </script>
+</body>
+</html>
